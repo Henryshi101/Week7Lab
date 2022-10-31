@@ -6,11 +6,17 @@
 package servlets;
 
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import models.Role;
+import models.User;
+import services.*;
 
 /**
  *
@@ -18,69 +24,101 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class UserServlet extends HttpServlet {
 
-    /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        response.setContentType("text/html;charset=UTF-8");
-        try (PrintWriter out = response.getWriter()) {
-            /* TODO output your page here. You may use following sample code. */
-            out.println("<!DOCTYPE html>");
-            out.println("<html>");
-            out.println("<head>");
-            out.println("<title>Servlet UserServlet</title>");            
-            out.println("</head>");
-            out.println("<body>");
-            out.println("<h1>Servlet UserServlet at " + request.getContextPath() + "</h1>");
-            out.println("</body>");
-            out.println("</html>");
-        }
-    }
+    private boolean first = true;
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+
+        List<User> users;
+        List<Role> roles;
+
+        UserService us = new UserService();
+        RoleService rs = new RoleService();
+
+        HttpSession session = request.getSession();
+        String action = request.getParameter("action");
+
+        try {
+            users = us.getAll();
+            roles = rs.getAll();
+            request.setAttribute("users", users);
+            request.setAttribute("roles", roles);
+        } catch (Exception ex) {
+            Logger.getLogger(UserServlet.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        getServletContext().getRequestDispatcher("/WEB-INF/user.jsp").forward(request, response);
+
+        if (action.equals("edit")) {
+            //need more code here
+        } else if (action.equals("delete")) {
+            String deleteEmail = request.getParameter("user.getEmail");
+            try {
+                us.delete(deleteEmail);
+            } catch (Exception ex) {
+                Logger.getLogger(UserServlet.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            try {
+                users = us.getAll();
+                roles = rs.getAll();
+                request.setAttribute("users", users);
+                request.setAttribute("roles", roles);
+            } catch (Exception ex) {
+                Logger.getLogger(UserServlet.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+
     }
 
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
-    }
 
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
-    @Override
-    public String getServletInfo() {
-        return "Short description";
-    }// </editor-fold>
+        List<User> users;
+        List<Role> roles;
+
+        String action = request.getParameter("action");
+        UserService us = new UserService();
+        RoleService rs = new RoleService();
+
+        request.setAttribute("edit", false);
+
+        HttpSession session = request.getSession();
+        if (action != null && action.equals("add")) {
+
+            String email = request.getParameter("email");
+            String firstName = request.getParameter("firstName");
+            String lastName = request.getParameter("lastName");
+            String password = request.getParameter("password");
+            String roleName = request.getParameter("role");
+            int roleId;
+            if (roleName.equals("regular user")) {
+                roleId = 2;
+            } else {
+                roleId = 1;
+            }
+
+            try {
+                us.insert(new User(email, firstName, lastName, password, new Role(roleId, "")));
+                request.removeAttribute("error");
+            } catch (Exception ex) {
+                Logger.getLogger(UserServlet.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        try {
+            users = us.getAll();
+            roles = rs.getAll();
+
+            request.setAttribute("users", users);
+            request.setAttribute("roles", roles);
+
+        } catch (Exception ex) {
+            Logger.getLogger(UserServlet.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        getServletContext().getRequestDispatcher("/WEB-INF/user.jsp").forward(request, response);
+
+    }
 
 }
